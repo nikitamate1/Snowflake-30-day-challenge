@@ -1,3 +1,4 @@
+# Day 2
 import streamlit as st
 from snowflake.snowpark.functions import ai_complete
 import json
@@ -31,4 +32,5 @@ if st.button("Generate Response"):
 
 # Footer
 st.divider()
+
 st.caption("Day 2: Hello, Cortex! | 30 Days of AI")
