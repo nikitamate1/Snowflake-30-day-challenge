@@ -1,4 +1,5 @@
-#Write streams
+# Day 3
+# Write streams
 import streamlit as st
 from snowflake.cortex import Complete
 import time
