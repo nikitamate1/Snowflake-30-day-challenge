@@ -28,7 +28,7 @@ This is a simple Streamlit application that demonstrates how to connect to Snowf
 
 ## Configuration
 
-For local development, you need to set up your Snowflake connection credentials in `app/.streamlit/secrets.toml`. Create this file if it doesn't exist and add your connection details:
+For local development, you need to set up your Snowflake connection credentials in `Snowflake-30-day-challenge-main/.streamlit/secrets.toml`. Create this file if it doesn't exist and add your connection details: Find in Snowsight → Account → View account details.
 
 ```toml
 [connections.snowflake]
@@ -45,17 +45,13 @@ schema = "your_schema"
 
 ## Usage
 
-1. Navigate to the `app` directory:
+1. Run the Streamlit app:
    ```
-   cd app
+   streamlit run app\dayx.py 
    ```
+- where x is 1 to 30
 
-2. Run the Streamlit app:
-   ```
-   streamlit run day1.py
-   ```
-
-3. Open your browser to the URL provided by Streamlit (usually `http://localhost:8501`).
+2. Open your browser to the URL provided by Streamlit (usually `http://localhost:8501`).
 
 The app will attempt to connect to Snowflake and display the current version.
 
