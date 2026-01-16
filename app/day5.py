@@ -1,3 +1,6 @@
+# Day 5
+# Post Generator App
+
 import streamlit as st
 import json
 from snowflake.snowpark.functions import ai_complete
