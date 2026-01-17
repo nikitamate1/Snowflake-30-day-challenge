@@ -1,3 +1,4 @@
+# Day 6
 # Status UI for Long-Running Task
 
 import streamlit as st
