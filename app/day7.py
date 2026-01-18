@@ -1,3 +1,5 @@
+# Day 7
+# Theming and Layout
 
 import streamlit as st
 import json
