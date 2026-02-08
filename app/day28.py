@@ -1,3 +1,6 @@
+# Day 28
+# Building Apps with AI Assistants using AGENTS.md
+
 import streamlit as st
 
 st.set_page_config(page_title="Day 28: AI-Assisted Development", page_icon=":material/psychology:", layout="wide")
