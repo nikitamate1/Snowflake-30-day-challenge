@@ -1,3 +1,6 @@
+# Day 29
+# LangChain Basics
+
 import streamlit as st
 from langchain_core.prompts import PromptTemplate
 from langchain_snowflake import ChatSnowflake
