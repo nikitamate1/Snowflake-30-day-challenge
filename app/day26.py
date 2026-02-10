@@ -5,8 +5,8 @@ import streamlit as st
 
 # Connect to Snowflake
 try:
-from snowflake.snowpark.context import get_active_session
-session = get_active_session()
+    from snowflake.snowpark.context import get_active_session
+    session = get_active_session()
 except:
     from snowflake.snowpark import Session
     session = Session.builder.configs(st.secrets["connections"]["snowflake"]).create()
@@ -286,43 +286,57 @@ tables:
         4. Click **"+ Files"** → Upload `sales_metrics_model.yaml`
         """)
     
-    # Step 6: Verification
-    st.markdown("---\n### Step 6: Verify Complete Setup")
-    if st.button(":material/verified: Check if Data is Ready", type="primary", use_container_width=True):
-        with st.status("Verifying setup...", expanded=True) as status:
-            all_good = True
-            checks = [
-                (f'USE DATABASE "{db_name}"', "Database exists"),
-                (f'SELECT COUNT(*) as cnt FROM "{db_name}"."{schema_name}".SALES_CONVERSATIONS', "Conversations table", True),
-                (f'SHOW CORTEX SEARCH SERVICES IN SCHEMA "{db_name}"."{schema_name}"', "Cortex Search service", False, search_service),
-                (f'SELECT COUNT(*) as cnt FROM "{db_name}"."{schema_name}".SALES_METRICS', "Sales metrics table", True, None, True),
-                (f'SHOW STAGES IN SCHEMA "{db_name}"."{schema_name}"', "MODELS stage", False, "MODELS", True)
-            ]
-            
-            for check in checks:
-                sql, name = check[0], check[1]
-                try:
-                    result = session.sql(sql).collect()
-                    if len(check) > 2 and check[2]:  # Count query
-                        st.write(f":material/check_circle: {name} with {result[0]['CNT']} records")
-                    elif len(check) > 3 and check[3]:  # Check for specific value
-                        found = any(check[3] in str(r) for r in result)
-                        if found:
-                            st.write(f":material/check_circle: {name}")
-                        else:
-                            st.write(f":material/{'warning' if len(check) > 4 else 'cancel'}: {name} not found")
-                            if len(check) <= 4: all_good = False
-                    else:
+# Step 6: Verification
+st.markdown("---\n### Step 6: Verify Complete Setup")
+
+if st.button(":material/verified: Check if Data is Ready", type="primary", use_container_width=True):
+    with st.status("Verifying setup...", expanded=True) as status:
+        all_good = True
+
+        checks = [
+            (f'USE DATABASE "{db_name}"', "Database exists"),
+            (f'SELECT COUNT(*) as cnt FROM "{db_name}"."{schema_name}".SALES_CONVERSATIONS', "Conversations table", True),
+            (f'SHOW CORTEX SEARCH SERVICES IN SCHEMA "{db_name}"."{schema_name}"', "Cortex Search service", False, search_service),
+            (f'SELECT COUNT(*) as cnt FROM "{db_name}"."{schema_name}".SALES_METRICS', "Sales metrics table", True, None, True),
+            (f'SHOW STAGES IN SCHEMA "{db_name}"."{schema_name}"', "MODELS stage", False, "MODELS", True)
+        ]
+
+        for check in checks:
+            sql, name = check[0], check[1]
+            try:
+                result = session.sql(sql).collect()
+
+                if len(check) > 2 and check[2]:  # COUNT query
+                    st.write(f":material/check_circle: {name} with {result[0]['CNT']} records")
+
+                elif len(check) > 3 and check[3]:  # Specific object check
+                    found = any(check[3] in str(r) for r in result)
+                    if found:
                         st.write(f":material/check_circle: {name}")
-                except:
-                    st.write(f":material/{'warning' if len(check) > 4 else 'cancel'}: {name} not found")
-                    if len(check) <= 4: all_good = False
-            
-            if all_good:
-                status.update(label=":material/celebration: Day 27 data ready! (Day 28+ data optional)", state="complete")
-                st.balloons()
-    else:
-                status.update(label="Complete Steps 1-3 for Day 27, Steps 4-5 for Day 28+", state="error")
+                    else:
+                        st.write(f":material/{'warning' if len(check) > 4 else 'cancel'}: {name} not found")
+                        if len(check) <= 4:
+                            all_good = False
+                else:
+                    st.write(f":material/check_circle: {name}")
+
+            except Exception:
+                st.write(f":material/{'warning' if len(check) > 4 else 'cancel'}: {name} not found")
+                if len(check) <= 4:
+                    all_good = False
+
+        # ✅ FINAL STATUS UPDATE — INSIDE THE CONTEXT
+        if all_good:
+            status.update(
+                label=":material/celebration: Day 27 data ready! (Day 28+ data optional)",
+                state="complete"
+            )
+            st.balloons()
+        else:
+            status.update(
+                label="⚠️ Complete Steps 1–3 for Day 27, Steps 4–5 for Day 28+",
+                state="error"
+            )
 
 # Create Agent Tab
 with tab1:
@@ -390,8 +404,8 @@ IMPORTANT CONSTRAINTS:
                 st.session_state.agent_created = True
                 status.update(label=":material/check_circle: Agent Ready!", state="complete")
                 st.balloons()
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
             status.update(label="Failed", state="error")
 
 st.divider()
