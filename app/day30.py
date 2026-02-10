@@ -1,3 +1,6 @@
+# Day 30
+# Structured Output with Pydantic
+
 import streamlit as st
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
