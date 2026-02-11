@@ -4,7 +4,7 @@ This is a simple Streamlit application that demonstrates how to connect to Snowf
 
 ## Prerequisites
 
-- Python 3.8 or higher
+- Python 3.10 or higher
 - A Snowflake account with appropriate permissions
 - Access to Snowflake database and warehouse
 
