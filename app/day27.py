@@ -37,7 +37,7 @@ def call_agent(query: str):
     payload = {
         "messages": [{"role": "user", "content": [{"type": "text", "text": query}]}]
     }
-    
+
     result = {
         "text": "",
         "thinking": "",
@@ -64,18 +64,23 @@ def call_agent(query: str):
                 event_type = event.get("event", "")
                 data = event.get("data", {})
                 
-                # Parse response event with thinking - capture first occurrence only
-                if event_type == "response" and not result["thinking"]:
+                if event_type == "response" and not result["text"]:
                     content_list = data.get("content", [])
                     for content_item in content_list:
-                        # Extract thinking text from first response event
                         if "thinking" in content_item and not result["thinking"]:
                             thinking_obj = content_item.get("thinking", {})
                             if isinstance(thinking_obj, dict):
                                 result["thinking"] = thinking_obj.get("text", "")
                             elif isinstance(thinking_obj, str):
                                 result["thinking"] = thinking_obj
-                            break  # Stop after finding first thinking
+
+                        # 2️⃣ Extract response text (output_text is now the common case)
+                        if content_item.get("type") in ("output_text", "text"):
+                            result["text"] += content_item.get("text", "")
+
+                    # Stop after first response event (keeps thinking concise)
+                    continue
+
                 
                 # Parse text response
                 if event_type == "response.text.delta":
@@ -94,7 +99,9 @@ def call_agent(query: str):
                     # For cortex_analyst, get SQL from input
                     if data.get("type") == "cortex_analyst_text_to_sql":
                         tool_input = data.get("input", {})
-                        result["sql"] = tool_input.get("sql")
+                        if not result["sql"]:
+                            result["sql"] = tool_input.get("sql")
+
                 
                 # Parse tool result - for table data
                 elif event_type == "response.tool_result":
@@ -149,7 +156,7 @@ def call_agent(query: str):
                         data = event.get('data', {})
                         
                         # Parse response event with thinking - capture first occurrence only
-                        if event_type == "response" and not result["thinking"]:
+                        if event_type == "response" and not result["text"]:
                             content_list = data.get("content", [])
                             for content_item in content_list:
                                 if "thinking" in content_item and not result["thinking"]:
@@ -158,7 +165,10 @@ def call_agent(query: str):
                                         result["thinking"] = thinking_obj.get("text", "")
                                     elif isinstance(thinking_obj, str):
                                         result["thinking"] = thinking_obj
-                                    break  # Stop after finding first thinking
+
+                                if content_item.get("type") in ("output_text", "text"):
+                                    result["text"] += content_item.get("text", "")
+
                         
                         if event_type == "response.text.delta":
                             result["text"] += data.get("text", "")
@@ -180,8 +190,10 @@ def call_agent(query: str):
                             result_set = data.get("result_set", {})
                             if result_set and result_set.get("data"):
                                 result["table_data"] = result_set
-                    except:
-                        pass
+                    except Exception as e:
+                        if debug_mode:
+                            st.error(e)
+
         
         return result
         
@@ -261,8 +273,11 @@ try:
             st.info(f"📊 Metrics: **{metrics_count}** records")
         else:
             st.error("❌ SALES_METRICS is empty! Run Step 4 in Day 26")
-except:
-    pass
+
+except Exception as e:
+    if debug_mode:
+        st.error(e)
+
 
 st.session_state.setdefault("messages", [])
 
@@ -272,13 +287,23 @@ with st.container(border=True):
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("**:material/query_stats: Sales Metrics** (uses SalesAnalyst)")
-        if (q := st.selectbox("", ["Select a question..."] + METRICS_QS, key="m", label_visibility="collapsed")) != "Select a question...":
+        if (q := st.selectbox(
+            " ", 
+            ["Select a question..."] + METRICS_QS, 
+            key="m", 
+            label_visibility="collapsed"
+            )) != "Select a question...":
             if st.button(":material/send: Ask", key="am", use_container_width=True):
                 st.session_state.pending = q
                 st.rerun()
     with col2:
         st.markdown("**:material/forum: Conversations** (uses ConversationSearch)")
-        if (q := st.selectbox("", ["Select a question..."] + CONVO_QS, key="c", label_visibility="collapsed")) != "Select a question...":
+        if (q := st.selectbox(
+            " ", 
+            ["Select a question..."] + CONVO_QS, 
+            key="c", 
+            label_visibility="collapsed"
+            )) != "Select a question...":
             if st.button(":material/send: Ask", key="ac", use_container_width=True):
                 st.session_state.pending = q
                 st.rerun()
@@ -297,8 +322,18 @@ for i, msg in enumerate(st.session_state.messages):
                 st.warning(msg['thinking'])
         
         # 3. Show text response (skip if SQL exists - we'll just show results)
-        if not msg.get('sql'):
-            st.markdown(msg['content'])
+        content = msg.get("content")
+
+        if isinstance(content, str) and content.strip():
+            st.markdown(content)
+        # Analyst answers via SQL / table → valid, no warning
+        elif msg.get("sql") or msg.get("table_data") or msg.get("tool_type"):
+            pass
+        # Only show warning if literally nothing came back
+        else:
+            st.info("ℹ️ Agent returned no text output.")
+
+
         
         # 4. Show SQL and table data if available (for analyst queries)
         if msg.get('sql'):
@@ -306,12 +341,16 @@ for i, msg in enumerate(st.session_state.messages):
                 st.code(msg['sql'], language="sql")
         
         # 5. Execute SQL directly if we have it
-        if msg.get('sql'):
+        if msg.get('table_data'):
+            st.dataframe(msg['table_data'], use_container_width=True)
+
+        elif msg.get('sql'):
             try:
                 df = session.sql(msg['sql']).to_pandas()
                 st.dataframe(df, use_container_width=True)
             except Exception as e:
                 st.error(f"SQL Error: {e}")
+
         
         # Debug: show events if enabled
         if debug_mode and msg.get('events'):
@@ -356,8 +395,15 @@ if user_input:
                 st.warning(result["thinking"])
         
         # 3. Show text response (skip if SQL exists - we'll just show results)
-        if not result["sql"]:
-            st.markdown(result["text"])
+        text = result.get("text", "")
+
+        if isinstance(text, str) and text.strip():
+            st.markdown(text)
+        elif result.get("sql") or result.get("table_data") or result.get("tool_type"):
+            pass  # Valid analyst response
+        else:
+            st.info("ℹ️ Agent returned no text output.")
+
         
         # 4. Show SQL if available
         if result["sql"]:
@@ -365,7 +411,10 @@ if user_input:
                 st.code(result["sql"], language="sql")
         
         # 5. Execute SQL directly if we have it
-        if result["sql"]:
+        if result["table_data"]:
+            st.dataframe(result["table_data"], use_container_width=True)
+
+        elif result["sql"]:
             try:
                 df = session.sql(result["sql"]).to_pandas()
                 st.dataframe(df, use_container_width=True)
