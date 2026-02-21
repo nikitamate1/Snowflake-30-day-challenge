@@ -73,7 +73,8 @@ Users can now personalize:
 - Demonstrates how UI state can be controlled dynamically
 
 The avatar is selected in the sidebar and passed into:
-st.chat_message(role, avatar=selected_avatar)
+
+`st.chat_message(role, avatar=selected_avatar)`
 
 
 The avatar dynamically changes based on the message role (`user` vs `assistant`).
